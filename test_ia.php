@@ -11,34 +11,69 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['plainte'])) {
     // On retire les caractères spéciaux dangereux pour le terminal
     $plainteSecurisee = preg_replace('/[^a-zA-Z0-9 áàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ]/u', '', $plainteSaisie);
 
-    // 2. Construction de la commande SWI-Prolog
-    // On appelle swipl en mode silencieux (-q), on charge le fichier, et on lance la requête
-    // path_decision.pl doit être dans le même dossier.
-    $scriptProlog = __DIR__ . '/prise_decision.pl';
-    
-    // Cette commande interroge le prédicat service_recommande de ton fichier Prolog
-    // On convertit la phrase en liste de mots via le découpage en Prolog pour coller à ta structure
-  // Version avec le chemin direct vers l'exécutable (Windows standard)
-$cheminSwipl = '"C:\Program Files\swipl\binswipl-win.exe"';
+    // 2. Exécution robuste de SWI-Prolog
+    $scriptProlog = __DIR__ . DIRECTORY_SEPARATOR . 'prise_decision_hospitalier.pl';
 
-$commande = sprintf(
-    '%s -q -s "%s" -g "normalize_string(\'%s\', Mots), (service_recommande(Mots, S) -> writeln(S) ; writeln(autre)), halt."',
-    $cheminSwipl,
-    $scriptProlog,
-    addslashes($plainteSecurisee)
-);
+    $candidatsSwipl = [
+        'C:\\Program Files\\swipl\\bin\\swipl.exe',
+        'C:\\Program Files\\swipl\\bin\\swipl-win.exe',
+        'swipl.exe',
+        'swipl'
+    ];
 
-    // 3. Exécution de la commande et récupération du résultat
-    $output = [];
-    $returnVar = 0;
-    exec($commande, $output, $returnVar);
+    $cheminSwipl = null;
+    foreach ($candidatsSwipl as $candidat) {
+        if (file_exists($candidat)) {
+            $cheminSwipl = $candidat;
+            break;
+        }
 
-    // 4. Analyse de la réponse du moteur Prolog
-    if ($returnVar === 0 && !empty($output)) {
-        // Le premier élément du tableau de sortie contient le nom du service renvoyé par writeln(S)
-        $serviceRecommande = trim($output[0]);
+        if ($candidat === 'swipl.exe' || $candidat === 'swipl') {
+            $version = shell_exec(escapeshellcmd($candidat) . ' --version 2>&1');
+            if ($version !== null && stripos($version, 'SWI-Prolog') !== false) {
+                $cheminSwipl = $candidat;
+                break;
+            }
+        }
+    }
+
+    if ($cheminSwipl === null) {
+        $messageErreur = 'SWI-Prolog est introuvable. Installez-le ou vérifiez le chemin d\'accès.';
     } else {
-        $messageErreur = "Le moteur IA Prolog n'a pas pu traiter la demande. Vérifie que SWI-Prolog est bien installé et accessible dans le PATH.";
+        $plainteProlog = '"' . str_replace('"', '\\"', $plainteSecurisee) . '"';
+        $goal = 'normalize_string(' . $plainteProlog . ', Mots), (service_recommande(Mots, S) -> writeln(S) ; writeln(autre)), halt.';
+
+        $descriptorspec = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w']
+        ];
+
+        $process = proc_open([$cheminSwipl, '-q', '-s', $scriptProlog, '-g', $goal], $descriptorspec, $pipes);
+
+        if (is_resource($process)) {
+            $stdout = stream_get_contents($pipes[1]);
+            $stderr = stream_get_contents($pipes[2]);
+            fclose($pipes[0]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            $returnVar = proc_close($process);
+
+            $output = array_values(array_filter(explode(PHP_EOL, trim((string) $stdout)), static function ($ligne) {
+                return trim($ligne) !== '';
+            }));
+
+            if ($returnVar === 0 && !empty($output)) {
+                $serviceRecommande = trim($output[0]);
+            } else {
+                $messageErreur = 'Le moteur IA Prolog n\'a pas pu traiter la demande.';
+                if (!empty(trim((string) $stderr))) {
+                    $messageErreur .= ' Détail : ' . trim((string) $stderr);
+                }
+            }
+        } else {
+            $messageErreur = 'Impossible d\'initialiser SWI-Prolog depuis PHP.';
+        }
     }
 }
 ?>
