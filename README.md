@@ -1,45 +1,14 @@
-# Prise de décision hospitalière
+# Prise de décision hospitalière - SEADO
 
-Ce projet est un modèle Prolog pour guider un patient vers le service hospitalier le plus adapté en fonction de sa plainte.
+Ce projet intègre un moteur de règles expert écrit en Prolog pour qualifier et router automatiquement les plaintes des patients vers les files d'attente adéquates.
 
-## Objectif
+## Améliorations Système
 
-- Un patient arrive, décrit son problème.
-- Le système Prolog analyse la plainte.
-- Il propose le service hospitalier et gère une file d'attente pour ce service.
+- **Filtrage des Salutations :** Bloque les saisies de type "Bonjour", "Salut" pour forcer un motif médical.
+- **Vérification de Longueur :** Rejette les mots uniques (ex: "tete") et demande une phrase contextuelle courte explicative.
+- **Gestion Hors-Contexte (Sécurité) :** Les demandes n'ayant aucun rapport médical ne saturent plus le système et renvoient vers la réception humaine.
 
-## Services inclus
+## Exécution locale
 
-- `cardiologie`
-- `orthopedie`
-- `gyneco`
-- `imagerie`
-- `pediatrie`
-- `urgence`
-- `neurologie`
-- `autre`
-
-## Étapes de travail
-
-1. Installer SWI-Prolog.
-2. Ouvrir `prise_decision_hospitalier.pl`.
-3. Lancer Prolog dans le dossier de projet.
-4. Charger le fichier : `?- [prise_decision_hospitalier].`
-5. Démarrer : `?- start.`
-6. Ajouter de nouveaux mots-clés et services selon les besoins.
-
-## Développement étape par étape
-
-1. Définir les services et la file d'attente pour chaque service.
-2. Écrire les règles de correspondance entre plainte et service.
-3. Créer des prédicats pour enregistrer un patient et l'ajouter à une queue.
-4. Afficher l'état des files d'attente.
-5. Améliorer progressivement le diagnostic (plus de mots-clés, phrases, NLP simple).
-6. Penser à l'intégration dans une interface externe (site web ou application).
-
-## Extension possible
-
-- Ajouter un service `dermatologie`, `psychiatrie`, `ORL`, etc.
-- Remplacer la recherche textuelle simple par un moteur NLP plus avancé.
-- Créer une interface web qui envoie les plaintes à Prolog.
-- Ajouter un mécanisme de priorité pour les urgences.
+1. Placez `prise_decision.pl` et `test_ia.php` dans votre répertoire web local (ex: `www/`).
+2. Accédez à `http://localhost/test_ia.php` depuis votre navigateur.
