@@ -11,9 +11,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['plainte'])) {
     // On retire les caractères spéciaux dangereux pour le terminal
     $plainteSecurisee = preg_replace('/[^a-zA-Z0-9 áàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ]/u', '', $plainteSaisie);
 
-    // 2. Exécution robuste de SWI-Prolog
+    // 2. Exécution robuste de SWI-Prolog qui fait appel à l'application swiProlog
     $scriptProlog = __DIR__ . DIRECTORY_SEPARATOR . 'prise_decision_hospitalier.pl';
 
+    // recherche de l'emplacement de swiPROLOG
     $candidatsSwipl = [
         'C:\\Program Files\\swipl\\bin\\swipl.exe',
         'C:\\Program Files\\swipl\\bin\\swipl-win.exe',
